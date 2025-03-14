@@ -26,10 +26,11 @@ pub struct Image {
 
 impl Image {
     pub unsafe fn from_luma8(width: usize, height: usize, buf: *mut u8) -> Result<Self, Error> {
-        let mut stride = width;
-        if stride % DEFAULT_ALIGNMENT_U8 != 0 {
-            stride += DEFAULT_ALIGNMENT_U8 - (stride % DEFAULT_ALIGNMENT_U8);
-        }
+        let stride = 1;
+        //let mut stride = width;
+        //if stride % DEFAULT_ALIGNMENT_U8 != 0 {
+        //    stride += DEFAULT_ALIGNMENT_U8 - (stride % DEFAULT_ALIGNMENT_U8);
+        //}
 
         let ptr = sys::image_u8_t {
             width: width as _,
