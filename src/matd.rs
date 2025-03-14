@@ -28,11 +28,11 @@ impl<'a> MatdRef<'a> {
         data
     }
 
-    pub(crate) unsafe fn from_ptr(ptr: *const sys::matd_t) -> Self {
+    pub(crate) unsafe fn from_ptr(ptr: *const sys::matd_t) -> Self { unsafe {
         Self {
             ref_: ptr.as_ref().expect("please report bug"),
         }
-    }
+    }}
 }
 
 impl<'a> Debug for MatdRef<'a> {

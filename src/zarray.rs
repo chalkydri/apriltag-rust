@@ -40,14 +40,14 @@ impl<T> ZArray<T> {
     ///
     /// # Safety
     /// The method is safe when the pointer was created by [apriltag_detector_detect](sys::apriltag_detector_detect).
-    pub unsafe fn from_raw(ptr: *mut sys::zarray_t) -> Self {
+    pub unsafe fn from_raw(ptr: *mut sys::zarray_t) -> Self { unsafe {
         let ptr = NonNull::new(ptr).expect("please report bug");
         assert_eq!(ptr.as_ref().el_sz, mem::size_of::<T>(), "please report bug");
         Self {
             ptr,
             _phantom: PhantomData,
         }
-    }
+    }}
 
     /// Returns the underlying raw pointer.
     pub fn into_raw(self) -> NonNull<sys::zarray_t> {

@@ -9,11 +9,9 @@
 use crate::Error;
 use apriltag_sys as sys;
 use std::{
-    ffi::{c_int, c_uint, CString},
     iter,
     mem::ManuallyDrop,
     ops::{Index, IndexMut},
-    ptr::NonNull,
     slice,
 };
 

@@ -65,9 +65,9 @@ impl Detection {
         };
 
         let poses: Vec<_> = unsafe {
-            let mut pose1: *mut sys::apriltag_pose_t = null_mut();
+            let pose1: *mut sys::apriltag_pose_t = null_mut();
             let mut err1: f64 = 0.0;
-            let mut pose2: *mut sys::apriltag_pose_t = null_mut();
+            let pose2: *mut sys::apriltag_pose_t = null_mut();
             let mut err2: f64 = 0.0;
 
             sys::estimate_tag_pose_orthogonal_iteration(
