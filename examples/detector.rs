@@ -1,16 +1,18 @@
-use anyhow::{ensure, Context, Error, Result};
-use apriltag::{Detector, Family, Image, TagParams};
+#[macro_use]
+extern crate clap;
+
+use apriltag::{Detector, Error, Family, Image, TagParams};
 use clap::Parser;
 use std::str::FromStr;
 
 /// Simple AprilTag detector.
-#[derive(Debug, Clone, Parser)]
+#[derive(Debug, Clone, clap::Parser)]
 struct Opts {
     #[clap(long = "family", default_value = "tag16h5")]
     /// family name.
     pub family_name: String,
 
-    #[clap(long)]
+    #[arg(value_parser = value_parser!(String))]
     /// optional tag parameters in format "tagsize,fx,fy,cx,cy".
     pub tag_params: Option<TagParamsArg>,
 
@@ -18,21 +20,21 @@ struct Opts {
     pub input_files: Vec<String>,
 }
 
-fn main() -> Result<()> {
+fn main() -> Result<(), Error> {
     let Opts {
         family_name,
         tag_params,
         input_files,
     } = Opts::parse();
 
-    ensure!(!input_files.is_empty(), "no input files");
+    assert!(!input_files.is_empty(), "no input files");
 
-    let family: Family = family_name.parse()?;
+    let family: Family = family_name.parse().unwrap();
     let tag_params: Option<TagParams> = tag_params.map(|params| params.into());
-    let mut detector = Detector::builder().add_family_bits(family, 1).build()?;
+    let mut detector = Detector::builder().add_family_bits(family, 1).build().unwrap();
 
     for path in input_files {
-        let image = Image::from_pnm_file(&path)?;
+        let image = Image::from_pnm_file(&path).unwrap();
         let detections = detector.detect(&image);
 
         println!("= image {path}");
@@ -49,7 +51,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, clap::Args)]
 struct TagParamsArg {
     pub tagsize: f64,
     pub fx: f64,
@@ -83,19 +85,18 @@ impl FromStr for TagParamsArg {
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         let tokens: Vec<_> = text.split(',').collect();
-        ensure!(
+        assert!(
             tokens.len() == 5,
             r#"tag parameters must be in format "tagsize,fx,fy,cx,cy""#
         );
 
         let values = tokens
             .into_iter()
-            .map(|token| -> Result<_> {
+            .map(|token| -> Result<_, _> {
                 let value: f64 = token.parse()?;
-                Ok(value)
+                Ok::<f64, Box<dyn std::error::Error>>(value)
             })
-            .collect::<Result<Vec<_>>>()
-            .with_context(|| format!("failed to parse tag parameters {}", text))?;
+            .collect::<Result<Vec<_>, _>>().unwrap();
 
         Ok(Self {
             tagsize: values[0],

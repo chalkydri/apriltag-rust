@@ -1,10 +1,7 @@
-use anyhow::{anyhow, bail, ensure, Context, Result};
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 use std::{
-    env::{self, VarError},
-    fs,
-    path::{Path, PathBuf},
+    env::{self, VarError}, error::Error, fs, path::{Path, PathBuf}
 };
 
 static MANIFEST_DIR: &str = env!("CARGO_MANIFEST_DIR");
@@ -20,7 +17,7 @@ enum SrcMethod {
     PkgConfigThenStatic(PathBuf),
 }
 
-fn get_source_method() -> Result<SrcMethod> {
+fn get_source_method() -> Result<SrcMethod, Box<dyn Error>> {
     use SrcMethod as M;
 
     let src = env::var_os("APRILTAG_SRC")
@@ -30,7 +27,7 @@ fn get_source_method() -> Result<SrcMethod> {
     let value = match env::var("APRILTAG_SYS_METHOD") {
         Ok(value) => value,
         Err(VarError::NotUnicode(_)) => {
-            bail!("If set, APRILTAG_SYS_METHOD environment variable must be UTF-8 string.")
+            panic!("If set, APRILTAG_SYS_METHOD environment variable must be UTF-8 string.")
         }
         Err(VarError::NotPresent) => return Ok(M::PkgConfigThenStatic(src)), // This is default
     };
@@ -41,7 +38,7 @@ fn get_source_method() -> Result<SrcMethod> {
         "raw,static" => M::RawStatic(src),
         "cmake,dynamic" => M::Cmake(src),
         value => {
-            bail!(
+            panic!(
                 r#"The APRILTAG_SYS_METHOD value "{value}" was not recognized. See README.md of the \
                  apriltag-sys crate for a description of this environment variable."#,
             );
@@ -51,7 +48,7 @@ fn get_source_method() -> Result<SrcMethod> {
     Ok(method)
 }
 
-fn main() -> Result<()> {
+fn main() -> Result<(), Box<dyn Error>> {
     use SrcMethod as M;
 
     println!("cargo:rerun-if-changed=wrapper.h");
@@ -78,7 +75,7 @@ fn main() -> Result<()> {
                         if let M::PkgConfigThenStatic(sdk_path) = other {
                             build_raw_static(sdk_path)?
                         } else {
-                            bail!("pkg-config failed: {e}");
+                            panic!("pkg-config failed: {e}");
                         }
                     }
                 }
@@ -178,7 +175,7 @@ fn main() -> Result<()> {
 }
 
 /// Use cmake to build April Tags as a shared library.
-fn build_cmake<P>(src_path: P) -> Result<Vec<String>>
+fn build_cmake<P>(src_path: P) -> Result<Vec<String>, Box<dyn Error>>
 where
     P: AsRef<Path>,
 {
@@ -200,7 +197,7 @@ where
 }
 
 /// Build April Tags source by passing all .c files and compiling static lib.
-fn build_raw_static(sdk_path: PathBuf) -> Result<Vec<String>> {
+fn build_raw_static(sdk_path: PathBuf) -> Result<Vec<String>, Box<dyn Error>> {
     let inc_dir = &sdk_path;
 
     let mut compiler = cc::Build::new();
@@ -214,12 +211,12 @@ fn build_raw_static(sdk_path: PathBuf) -> Result<Vec<String>> {
         .map(|entry| anyhow::Ok(entry??.path()))
         .filter_ok(|path| matches!(path.extension(), Some(ext) if ext == "c"))
         .filter_ok(|path| !path.ends_with("apriltag_pywrap.c"))
-        .try_fold(0, |count, path| -> Result<_> {
-            compiler.file(path?);
-            Ok(count + 1)
+        .try_fold(0, |count, path| -> Result<_, _> {
+            compiler.file(path.unwrap());
+            Ok::<i32, Box<dyn Error>>(count + 1)
         })?;
 
-    ensure!(
+    assert!(
         count > 0,
         "No source files found at {}. Hint: do 'git submodule update --init'.",
         sdk_path.display()

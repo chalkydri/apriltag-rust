@@ -9,7 +9,7 @@ use std::{
     ffi::c_int,
     fmt::{self, Debug, Formatter},
     mem::{ManuallyDrop, MaybeUninit},
-    ptr::NonNull,
+    ptr::{null_mut, NonNull},
 };
 
 /// Represent a marker detection outcome.
@@ -65,35 +65,37 @@ impl Detection {
         };
 
         let poses: Vec<_> = unsafe {
-            let mut pose1: MaybeUninit<sys::apriltag_pose_t> = MaybeUninit::uninit();
-            let mut err1: MaybeUninit<f64> = MaybeUninit::uninit();
-            let mut pose2: MaybeUninit<sys::apriltag_pose_t> = MaybeUninit::uninit();
-            let mut err2: MaybeUninit<f64> = MaybeUninit::uninit();
+            let mut pose1: *mut sys::apriltag_pose_t = null_mut();
+            let mut err1: f64 = 0.0;
+            let mut pose2: *mut sys::apriltag_pose_t = null_mut();
+            let mut err2: f64 = 0.0;
 
             sys::estimate_tag_pose_orthogonal_iteration(
                 &mut info as *mut _,
-                err1.as_mut_ptr(),
-                pose1.as_mut_ptr(),
-                err2.as_mut_ptr(),
-                pose2.as_mut_ptr(),
+                &mut err1,
+                pose1,
+                &mut err2,
+                pose2,
                 n_iters as c_int,
             );
 
-            let pose1 = pose1.assume_init();
-            let err1 = err1.assume_init();
+            let pose1 = if !(*pose1).R.is_null() {
+                Some(PoseEstimation {
+                    pose: Pose(*pose1),
+                    error: err1,
+                })
+            } else {
+                None
+            };
 
-            let pose2 = pose2.assume_init();
-            let err2 = err2.assume_init();
-
-            let pose1 = (!pose1.R.is_null()).then(|| PoseEstimation {
-                pose: Pose(pose1),
-                error: err1,
-            });
-
-            let pose2 = (!pose2.R.is_null()).then(|| PoseEstimation {
-                pose: Pose(pose2),
-                error: err2,
-            });
+            let pose2 = if !(*pose2).R.is_null() {
+                Some(PoseEstimation {
+                    pose: Pose(*pose2),
+                    error: err2,
+                })
+            } else {
+                None
+            };
 
             pose1.into_iter().chain(pose2).collect()
         };

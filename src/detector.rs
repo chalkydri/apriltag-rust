@@ -8,8 +8,8 @@ use crate::{
     zarray::ZArray,
 };
 use apriltag_sys as sys;
-use measurements::angle::Angle;
-use noisy_float::prelude::R32;
+use measurements::Angle;
+use noisy_float::types::R32;
 use std::{ffi::c_int, mem::ManuallyDrop, ptr::NonNull};
 
 /// The detector builder that creates [Detector].
@@ -89,7 +89,7 @@ impl Detector {
     /// Run detection on the input image.
     pub fn detect(&mut self, image: &Image) -> Vec<Detection> {
         let detections = unsafe {
-            let ptr = sys::apriltag_detector_detect(self.ptr.as_ptr(), image.ptr.as_ptr());
+            let ptr = sys::apriltag_detector_detect(self.ptr.as_ptr(), core::ptr::from_ref(&image.ptr) as *mut _);
             let zarray = ZArray::<*mut sys::apriltag_detection_t>::from_raw(ptr);
             let detections = zarray
                 .iter()
