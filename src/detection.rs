@@ -163,3 +163,6 @@ impl Drop for Detection {
         }
     }
 }
+
+unsafe impl Sync for Detection {}
+unsafe impl Send for Detection {}
