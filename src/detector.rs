@@ -188,6 +188,9 @@ impl Drop for Detector {
     }
 }
 
+unsafe impl Sync for Detector {}
+unsafe impl Send for Detector {}
+
 /// The adjustable theshold for detecting candidates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct QuadThresholds {
